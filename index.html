@@ -1551,8 +1551,10 @@ const SHEET_TRAVAUX = 'Travaux';
 const SHEET_ALERTES = 'Alertes';
 
 function gsheetUrl(sheet) {
-  return 'https://docs.google.com/spreadsheets/d/' + SHEET_ID
+  let url = 'https://docs.google.com/spreadsheets/d/' + SHEET_ID
     + '/gviz/tq?tqx=out:json&sheet=' + encodeURIComponent(sheet);
+  if(sheet === SHEET_ALERTES) url += '&headers=1&range=A2:F50';
+  return url;
 }
 function parseGSheet(text) {
   const m = text.match(/setResponse\(([\s\S]*)\)/);
@@ -1567,12 +1569,12 @@ function normalizeEtat(val) {
   return 'planifie';
 }
 function normalizeNiveau(val) {
-  const v = String(val).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  const v = String(val||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
   if(v.includes('urgent') || v==='urgence') return 'urgence';
   if(v.includes('vigil')) return 'vigilance';
   if(v.includes('decis') || v.includes('attente')) return 'decision';
   if(v.includes('info')) return 'info';
-  return 'info';
+  return null; // valeur inconnue → sera filtrée
 }
 function normalizeStatut(val) {
   const v = String(val).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
@@ -1599,15 +1601,11 @@ function toAlertes(data) {
     if(niveau.toLowerCase() === 'niveau') return false;
     if(titre.toLowerCase()  === 'titre')  return false;
     const niv = normalizeNiveau(niveau);
-    if(!NIVEAUX_VALIDES.includes(niv)) return false;
+    if(!niv || !NIVEAUX_VALIDES.includes(niv)) return false;
     return true;
   }).map((row,i)=>{
     const g=idx=>row.c[idx]?(row.c[idx].v??''):'';
-    const rawNiveau = String(g(0)).trim();
-    const normNiveau = normalizeNiveau(rawNiveau);
-    const rawTitre = String(g(2)).trim();
-    console.log(`✅ Alerte acceptée ${i+1}: niveau="${rawNiveau}"→"${normNiveau}" titre="${rawTitre}"`);
-    return {id:i+1,niveau:normNiveau,annee:String(g(1)).trim(),
+    return {id:i+1,niveau:normalizeNiveau(String(g(0)).trim()),annee:String(g(1)).trim(),
             titre:String(g(2)).trim(),desc:String(g(3)).trim(),
             ecole:String(g(4)).trim(),statut:normalizeStatut(g(5))};
   });
