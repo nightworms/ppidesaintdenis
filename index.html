@@ -1589,11 +1589,13 @@ function parseGSheet(text) {
   return m ? JSON.parse(m[1]) : null;
 }
 function normalizeEtat(val) {
-  const v = String(val).trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
-  if(['realise','termine'].some(x=>v.includes(x))) return 'realise';
-  if(v==='cours'||v==='en cours'||v==='encours') return 'cours';
+  const v = String(val||'').trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'');
+  if(v.includes('non realise')||v.includes('reporte')) return 'planifie';
+  if(v.includes('cours')) return 'cours';
   if(v.includes('consult')) return 'consult';
   if(v.includes('urgent')) return 'urgent';
+  if(v.includes('planif')) return 'planifie';
+  if(v.includes('realise')||v.includes('termine')) return 'realise';
   return 'planifie';
 }
 function normalizeNiveau(val) {
